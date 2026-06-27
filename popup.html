@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PriceWatch PH</title>
+  <link rel="stylesheet" href="css/popup.css" />
+</head>
+<body>
+
+  <!-- ─── Header ──────────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-brand">
+      <div class="header-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="header-title">PriceWatch <span class="header-ph">PH</span></span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="btn-export" title="Export tracked products">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>
+      <button class="icon-btn" id="btn-refresh" title="Refresh current product">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- ─── Nav Tabs ─────────────────────────────────────────────────── -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="current">Current</button>
+    <button class="tab-btn" data-tab="tracked">
+      Tracked
+      <span class="badge" id="tracked-count">0</span>
+    </button>
+  </nav>
+
+  <!-- ─── Tab: Current Product ─────────────────────────────────────── -->
+  <section class="tab-panel active" id="tab-current">
+
+    <!-- Not on supported page -->
+    <div class="empty-state" id="state-unsupported" style="display:none;">
+      <div class="empty-icon">🛍️</div>
+      <p class="empty-title">Open a product page</p>
+      <p class="empty-sub">Navigate to a product on <strong>Shopee PH</strong> or <strong>Lazada PH</strong>, then click the extension icon.</p>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-state" id="state-loading" style="display:none;">
+      <div class="spinner"></div>
+      <p>Reading product info…</p>
+    </div>
+
+    <!-- Error -->
+    <div class="error-state" id="state-error" style="display:none;">
+      <div class="empty-icon">⚠️</div>
+      <p class="empty-title">Couldn't read product</p>
+      <p class="empty-sub" id="error-msg">The page may still be loading. Try refreshing.</p>
+      <button class="btn btn-secondary" id="btn-retry">Try Again</button>
+    </div>
+
+    <!-- Product Card -->
+    <div id="state-product" style="display:none;">
+
+      <!-- Platform headliner banner -->
+      <div class="platform-headliner" id="platform-headliner">
+        <div class="platform-headliner-inner">
+          <span class="platform-dot" id="platform-dot"></span>
+          <span class="platform-headliner-text" id="platform-headliner-text">SHOPEE PH</span>
+        </div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-layout">
+          <div class="product-img-wrap">
+            <img id="product-img" src="" alt="Product image" />
+          </div>
+          <div class="product-info">
+            <p class="product-name" id="product-name">Product Name</p>
+            <div class="price-row">
+              <span class="price-label">Current Price</span>
+              <span class="price-value" id="product-price">₱0.00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Variant range notice -->
+      <div class="variant-notice" id="variant-notice" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="vn-text"></span>
+      </div>
+
+      <!-- Already tracked notice -->
+      <div class="already-tracked" id="already-tracked" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Already tracking this product
+      </div>
+
+      <!-- Set Target Price -->
+      <div class="target-section" id="target-section">
+        <div class="section-label">Set Price Alert</div>
+        <p class="alert-hint">You'll be notified when the price reaches your target — whether it goes up or down.</p>
+        <div class="target-input-row">
+          <span class="peso-prefix">₱</span>
+          <input type="number" id="target-price-input" class="target-input" placeholder="Enter target price" min="0" step="1" />
+        </div>
+        <p class="tracking-note" id="tracking-note" style="display:none;"></p>
+        <button class="btn btn-primary" id="btn-track">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+          Start Tracking
+        </button>
+      </div>
+
+      <!-- Update target (when already tracked) -->
+      <div class="target-section" id="update-section" style="display:none;">
+        <div class="section-label">Update Alert</div>
+        <div class="current-target-row">
+          <span class="ct-label">Current target:</span>
+          <span class="ct-value" id="current-target-display">—</span>
+        </div>
+        <p class="alert-hint">You'll be notified when the price reaches this amount.</p>
+        <div class="target-input-row">
+          <span class="peso-prefix">₱</span>
+          <input type="number" id="update-price-input" class="target-input" placeholder="Enter new target" min="0" step="1" />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-update-target">Update Target</button>
+          <button class="btn btn-danger" id="btn-remove">Remove</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ─── Tab: Tracked Products ─────────────────────────────────────── -->
+  <section class="tab-panel" id="tab-tracked">
+
+    <div class="empty-state" id="tracked-empty" style="display:none;">
+      <div class="empty-icon">📋</div>
+      <p class="empty-title">No tracked products yet</p>
+      <p class="empty-sub">Open a product page on Shopee PH or Lazada PH to start tracking.</p>
+    </div>
+
+    <div id="tracked-list"></div>
+
+  </section>
+
+  <!-- ─── Toast ─────────────────────────────────────────────────────── -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ─── Export Modal ──────────────────────────────────────────────── -->
+  <div class="modal-overlay" id="export-modal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <span class="modal-title">Export Data</span>
+        <button class="icon-btn" id="btn-modal-close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Download your tracked products and price history as a JSON file, or as a CSV spreadsheet.</p>
+        <div class="export-options">
+          <button class="btn btn-primary" id="btn-export-json">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Download JSON
+          </button>
+          <button class="btn btn-secondary" id="btn-export-csv">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Download CSV
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/popup.js"></script>
+</body>
+</html>
