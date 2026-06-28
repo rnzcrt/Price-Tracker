@@ -1,0 +1,60 @@
+{
+  "shopee": {
+    "platform": "shopee",
+    "urlPattern": "shopee.ph",
+    "productPagePattern": "-i\\.\\d+\\.\\d+|/product/\\d+/\\d+",
+    "selectors": {
+      "price": [
+        ".IZPeQz.B67UQ0",
+        ".jRlVo0 .IZPeQz",
+        ".jRlVo0 > div",
+        ".jRlVo0 > span"
+      ],
+      "name": [
+        "[class*='product-name'] span",
+        "[class*='product-name']",
+        "[class*='pdp-product-title']",
+        ".page-product h1",
+        "main h1",
+        "h1"
+      ],
+      "image": [
+        ".UdI7e2 img.uXN1L5",
+        ".UdI7e2 picture img",
+        ".UdI7e2 img",
+        "picture.UkIsx8 img"
+      ],
+      "priceExcludeStyle": ["line-through", "rgba(0, 0, 0, 0.26)"]
+    }
+  },
+  "lazada": {
+    "platform": "lazada",
+    "urlPattern": "lazada.com.ph",
+    "productPagePattern": "/products/|i\\d{5,}",
+    "selectors": {
+      "price": [
+        ".pdp-v2-product-price-content-salePrice-amount"
+      ],
+      "priceExclude": [
+        ".pdp-v2-product-price-content-originalPrice-amount"
+      ],
+      "priceFallback": [
+        "[class*='pdp-v2-product-price-content'][class*='amount']:not([class*='originalPrice'])"
+      ],
+      "name": [
+        ".pdp-product-title",
+        "[class*='pdp-product-title']",
+        "h1.pdp-mod-product-badge-title",
+        "[class*='title--wrap'] span",
+        "h1[class*='title']",
+        "h1"
+      ],
+      "image": [
+        ".gallery-preview-panel__image img",
+        "[class*='gallery-preview-panel'] img",
+        "[class*='image-view__image'] img",
+        "[class*='module-pdp-image'] img"
+      ]
+    }
+  }
+}
