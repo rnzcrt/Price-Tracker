@@ -11,7 +11,7 @@
   <header class="header">
     <div class="header-brand">
       <div class="header-logo">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
           <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
           <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
           <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
@@ -20,69 +20,53 @@
       <span class="header-title">PriceWatch <span class="header-ph">PH</span></span>
     </div>
     <div class="header-actions">
-      <button class="icon-btn" id="btn-export" title="Export tracked products">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
+      <button class="icon-btn" id="btn-export" title="Export data">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      </button>
+      <button class="icon-btn" id="btn-import" title="Import data">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 5 17 10"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
       </button>
       <button class="icon-btn" id="btn-test-notif" title="Test notification">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-        </svg>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
       </button>
-      <button class="icon-btn" id="btn-refresh" title="Refresh current product">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
+      <button class="icon-btn" id="btn-refresh" title="Refresh">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
       </button>
     </div>
   </header>
 
   <nav class="tab-nav">
     <button class="tab-btn active" data-tab="current">Current</button>
-    <button class="tab-btn" data-tab="tracked">
-      Tracked <span class="badge" id="tracked-count">0</span>
-    </button>
-    <button class="tab-btn" data-tab="alerts">
-      Alerts <span class="badge badge-red" id="alerts-count">0</span>
-    </button>
+    <button class="tab-btn" data-tab="tracked">Tracked <span class="badge" id="tracked-count">0</span></button>
+    <button class="tab-btn" data-tab="alerts">Alerts <span class="badge badge-red" id="alerts-count" style="display:none">0</span></button>
   </nav>
 
   <!-- ── Current Tab ─────────────────────────────────────────────── -->
   <section class="tab-panel active" id="tab-current">
-
-    <div class="empty-state" id="state-unsupported" style="display:none;">
+    <div class="empty-state" id="state-unsupported" style="display:none">
       <div class="empty-icon">🛍️</div>
       <p class="empty-title">Open a product page</p>
       <p class="empty-sub">Navigate to a product on <strong>Shopee PH</strong> or <strong>Lazada PH</strong>, then click the extension icon.</p>
     </div>
-
-    <div class="loading-state" id="state-loading" style="display:none;">
-      <div class="spinner"></div>
-      <p>Reading product info…</p>
+    <div class="loading-state" id="state-loading" style="display:none">
+      <div class="spinner"></div><p>Reading product info…</p>
     </div>
-
-    <div class="error-state" id="state-error" style="display:none;">
+    <div class="error-state" id="state-error" style="display:none">
       <div class="empty-icon">⚠️</div>
       <p class="empty-title" id="error-title">Couldn't read product</p>
-      <p class="empty-sub" id="error-msg">The page may still be loading.</p>
+      <p class="empty-sub" id="error-msg"></p>
       <button class="btn btn-secondary" id="btn-retry">Try Again</button>
     </div>
-
-    <div id="state-product" style="display:none;">
-
+    <div id="state-product" style="display:none">
       <div class="platform-headliner" id="platform-headliner">
         <div class="platform-headliner-inner">
-          <span class="platform-dot" id="platform-dot"></span>
-          <span class="platform-headliner-text" id="platform-headliner-text">SHOPEE PH</span>
+          <span class="platform-dot"></span>
+          <span id="platform-headliner-text">SHOPEE PH</span>
         </div>
       </div>
-
       <div class="product-card">
         <div class="product-layout">
-          <div class="product-img-wrap">
-            <img id="product-img" src="" alt="Product image" />
-          </div>
+          <div class="product-img-wrap"><img id="product-img" src="" alt="" /></div>
           <div class="product-info">
             <p class="product-name" id="product-name"></p>
             <div class="price-row">
@@ -92,34 +76,28 @@
           </div>
         </div>
       </div>
-
-      <div class="variant-notice" id="variant-notice" style="display:none;">
+      <div class="variant-notice" id="variant-notice" style="display:none">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         <span class="vn-text"></span>
       </div>
-
-      <div class="already-tracked" id="already-tracked" style="display:none;">
+      <div class="already-tracked" id="already-tracked" style="display:none">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
         Already tracking this product
       </div>
-
-      <!-- Add new tracking -->
       <div class="target-section" id="target-section">
         <div class="section-label">Set Price Alert</div>
-        <p class="alert-hint">Get notified when the price hits your target — up or down.</p>
+        <p class="alert-hint">Get notified when price reaches your target (equal to or lower).</p>
         <div class="target-input-row">
           <span class="peso-prefix">₱</span>
           <input type="number" id="target-price-input" class="target-input" placeholder="Enter target price" min="0" step="1" />
         </div>
-        <p class="tracking-note" id="tracking-note" style="display:none;"></p>
+        <p class="tracking-note" id="tracking-note" style="display:none"></p>
         <button class="btn btn-primary" id="btn-track">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
           Start Tracking
         </button>
       </div>
-
-      <!-- Already tracked — update/remove -->
-      <div class="target-section" id="update-section" style="display:none;">
+      <div class="target-section" id="update-section" style="display:none">
         <div class="section-label">Update Alert</div>
         <div class="current-target-row">
           <span class="ct-label">Current target:</span>
@@ -134,62 +112,107 @@
           <button class="btn btn-danger" id="btn-remove">Remove</button>
         </div>
       </div>
-
     </div>
   </section>
 
   <!-- ── Tracked Tab ─────────────────────────────────────────────── -->
   <section class="tab-panel" id="tab-tracked">
-
-    <div class="empty-state" id="tracked-empty" style="display:none;">
+    <div class="empty-state" id="tracked-empty" style="display:none">
       <div class="empty-icon">📋</div>
       <p class="empty-title">No tracked products yet</p>
       <p class="empty-sub">Open a product page on Shopee PH or Lazada PH to start tracking.</p>
     </div>
-
     <div id="tracked-list"></div>
-
   </section>
 
-  <!-- ── Alerts Tab ──────────────────────────────────────────────── -->
+  <!-- ── Alerts Tab ─────────────────────────────────────────────── -->
   <section class="tab-panel" id="tab-alerts">
-
     <div class="alerts-toolbar">
       <button class="btn btn-primary btn-sm" id="btn-force-check">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-        </svg>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Check Prices Now
       </button>
       <button class="btn btn-secondary btn-sm" id="btn-clear-alerts">Clear Log</button>
     </div>
-
     <div class="alerts-hint">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-      Notified when price hits target, drops ≥5%, or rises ≥5%.
+      Notified when price equals/drops below target, or drops ≥5%.
     </div>
-
-    <div class="empty-state" id="alerts-empty" style="display:none;">
+    <div class="empty-state" id="alerts-empty" style="display:none">
       <div class="empty-icon">🔔</div>
       <p class="empty-title">No alerts yet</p>
       <p class="empty-sub">Click "Check Prices Now" to run an immediate check on all tracked products.</p>
     </div>
-
     <div id="alerts-list"></div>
-
   </section>
+
+  <!-- ── History Panel (slide-in) ──────────────────────────────────── -->
+  <div class="history-overlay" id="history-overlay" style="display:none">
+    <div class="history-panel" id="history-panel">
+      <div class="history-header">
+        <button class="icon-btn" id="btn-history-close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+        <div class="history-title-wrap">
+          <span class="history-title" id="history-product-name">Price History</span>
+          <span class="history-platform" id="history-platform-badge"></span>
+        </div>
+      </div>
+
+      <!-- Stats row -->
+      <div class="history-stats" id="history-stats">
+        <div class="hstat">
+          <span class="hstat-label">Current</span>
+          <span class="hstat-value" id="hstat-current">—</span>
+        </div>
+        <div class="hstat">
+          <span class="hstat-label">Target</span>
+          <span class="hstat-value hstat-accent" id="hstat-target">—</span>
+        </div>
+        <div class="hstat">
+          <span class="hstat-label">Lowest</span>
+          <span class="hstat-value hstat-green" id="hstat-low">—</span>
+        </div>
+        <div class="hstat">
+          <span class="hstat-label">Highest</span>
+          <span class="hstat-value hstat-red" id="hstat-high">—</span>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="chart-wrap">
+        <canvas id="price-chart" width="320" height="160"></canvas>
+        <div class="chart-empty" id="chart-empty" style="display:none">
+          <p>No price history yet.<br>History is recorded on each background check.</p>
+        </div>
+      </div>
+
+      <!-- Edit target inline -->
+      <div class="history-edit">
+        <div class="section-label">Update Target Price</div>
+        <div class="target-input-row">
+          <span class="peso-prefix">₱</span>
+          <input type="number" id="history-target-input" class="target-input" placeholder="Enter target price" min="0" step="1" />
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-history-save-target">Save Target</button>
+          <button class="btn btn-danger" id="btn-history-remove">Remove</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
 
   <!-- Export Modal -->
-  <div class="modal-overlay" id="export-modal" style="display:none;">
+  <div class="modal-overlay" id="export-modal" style="display:none">
     <div class="modal">
       <div class="modal-header">
         <span class="modal-title">Export Data</span>
         <button class="icon-btn" id="btn-modal-close">✕</button>
       </div>
       <div class="modal-body">
-        <p class="modal-desc">Download all tracked products and price history.</p>
+        <p class="modal-desc">Download all tracked products and price history. Use this to back up data before switching devices.</p>
         <div class="export-options">
           <button class="btn btn-primary" id="btn-export-json">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -204,32 +227,11 @@
     </div>
   </div>
 
-  <!-- Edit Target Modal -->
-  <div class="modal-overlay" id="edit-modal" style="display:none;">
-    <div class="modal">
-      <div class="modal-header">
-        <span class="modal-title">Edit Target Price</span>
-        <button class="icon-btn" id="btn-edit-modal-close">✕</button>
-      </div>
-      <div class="modal-body">
-        <p class="edit-product-name" id="edit-product-name"></p>
-        <div class="current-target-row" style="margin-bottom:10px;">
-          <span class="ct-label">Current target:</span>
-          <span class="ct-value" id="edit-current-target">—</span>
-        </div>
-        <div class="target-input-row">
-          <span class="peso-prefix">₱</span>
-          <input type="number" id="edit-target-input" class="target-input" placeholder="New target price" min="0" step="1" />
-        </div>
-        <div class="btn-row" style="margin-top:10px;">
-          <button class="btn btn-primary" id="btn-edit-save">Save</button>
-          <button class="btn btn-danger" id="btn-edit-remove">Remove</button>
-        </div>
-      </div>
-    </div>
-  </div>
+  <!-- Hidden file input for import -->
+  <input type="file" id="import-file-input" accept=".json" style="display:none" />
 
   <script src="js/db.js"></script>
+  <script src="js/chart.js"></script>
   <script src="js/popup.js"></script>
 </body>
 </html>
