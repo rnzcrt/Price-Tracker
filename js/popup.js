@@ -1,559 +1,372 @@
-// popup.js – Extension popup controller
-"use strict";
+/* popup.css – PriceWatch PH v2.0 */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-let currentProductData    = null;
-let currentTrackedProduct = null;
-let historyProductId      = null; // which product the history panel is showing
-
-const $ = id => document.getElementById(id);
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
-const fmt = n => n == null || isNaN(n) ? "—"
-  : "₱" + Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-function fmtDisplay(data) {
-  return data?.displayPrice || fmt(data?.price);
+:root {
+  --bg:         #0f1117;
+  --bg-2:       #181c25;
+  --bg-3:       #1e2330;
+  --border:     #2a3045;
+  --border-2:   #374060;
+  --text:       #e8eaf0;
+  --text-2:     #9aa0b8;
+  --text-3:     #636b88;
+  --accent:     #4f7ef8;
+  --accent-dim: #2c4a9e;
+  --green:      #22c55e;
+  --green-dim:  #14532d;
+  --red:        #f43f5e;
+  --red-dim:    #881337;
+  --amber:      #f59e0b;
+  --shopee:     #ee4d2d;
+  --shopee-dim: #7a2010;
+  --lazada:     #ef5350;
+  --lazada-dim: #7a1f1e;
+  --radius:     10px;
+  --radius-sm:  6px;
+  --tr:         0.18s ease;
 }
 
-function timeAgo(iso) {
-  if (!iso) return "Never";
-  const m = Math.floor((Date.now() - new Date(iso)) / 60000);
-  if (m < 1) return "Just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  return `${Math.floor(h / 24)}d ago`;
+html { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; font-size: 13px; background: var(--bg); color: var(--text); }
+body { width: 360px; min-height: 200px; max-height: 600px; overflow-y: auto; overflow-x: hidden; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 4px; }
+
+/* ── Header ───────────────────────────────────────────────────────── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 13px; background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 10;
+}
+.header-brand { display: flex; align-items: center; gap: 8px; }
+.header-logo {
+  width: 30px; height: 30px; background: var(--accent);
+  border-radius: var(--radius-sm); display: grid; place-items: center; color: #fff; flex-shrink: 0;
+}
+.header-title { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+.header-ph { color: var(--accent); }
+.header-actions { display: flex; gap: 5px; }
+
+/* ── Icon Button ─────────────────────────────────────────────────── */
+.icon-btn {
+  width: 28px; height: 28px; background: var(--bg-3);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text-2); cursor: pointer; display: grid;
+  place-items: center; transition: var(--tr);
+}
+.icon-btn:hover { background: var(--border); color: var(--text); }
+
+/* ── Tab Nav ─────────────────────────────────────────────────────── */
+.tab-nav {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  background: var(--bg-2); border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  padding: 9px 6px; background: none; border: none;
+  color: var(--text-3); font-size: 12px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center;
+  justify-content: center; gap: 5px; transition: var(--tr);
+  border-bottom: 2px solid transparent; position: relative; bottom: -1px;
+}
+.tab-btn:hover { color: var(--text-2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.badge {
+  background: var(--accent-dim); color: var(--accent);
+  font-size: 10px; font-weight: 700; padding: 1px 5px;
+  border-radius: 10px; min-width: 18px; text-align: center;
+}
+.badge-red { background: rgba(244,63,94,0.15); color: var(--red); }
+
+/* ── Tab Panels ──────────────────────────────────────────────────── */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── States ──────────────────────────────────────────────────────── */
+.empty-state, .error-state {
+  text-align: center; padding: 28px 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.empty-icon { font-size: 32px; margin-bottom: 4px; }
+.empty-title { font-size: 14px; font-weight: 600; }
+.empty-sub { font-size: 12px; color: var(--text-2); line-height: 1.5; max-width: 240px; }
+.loading-state {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 36px 16px; color: var(--text-2); font-size: 12px;
+}
+.spinner {
+  width: 24px; height: 24px; border: 2px solid var(--border-2);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Platform Headliner ──────────────────────────────────────────── */
+.platform-headliner {
+  display: flex; align-items: center; padding: 7px 14px;
+  background: var(--shopee-dim); border-bottom: 2px solid var(--shopee);
+  transition: background .2s, border-color .2s;
+}
+.platform-headliner.lazada { background: var(--lazada-dim); border-bottom-color: var(--lazada); }
+.platform-headliner-inner { display: flex; align-items: center; gap: 7px; }
+.platform-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--shopee); flex-shrink: 0;
+}
+.platform-headliner.lazada .platform-dot { background: var(--lazada); }
+#platform-headliner-text { font-size: 11px; font-weight: 800; letter-spacing: 1.2px; color: #fff; text-transform: uppercase; }
+
+/* ── Product Card ────────────────────────────────────────────────── */
+.product-card { background: var(--bg-2); border-bottom: 1px solid var(--border); padding: 12px 14px; }
+.product-layout { display: flex; gap: 11px; }
+.product-img-wrap {
+  flex-shrink: 0; width: 76px; height: 76px; background: var(--bg-3);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden; display: grid; place-items: center;
+}
+.product-img-wrap img { width: 100%; height: 100%; object-fit: contain; }
+.no-img { font-size: 26px; }
+.product-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: space-between; }
+.product-name {
+  font-size: 12.5px; font-weight: 500; line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; margin-bottom: 8px;
+}
+.price-label { font-size: 9.5px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; display: block; }
+.price-value { font-size: 20px; font-weight: 700; color: var(--green); letter-spacing: -.3px; word-break: break-word; line-height: 1.2; }
+
+/* ── Notices ─────────────────────────────────────────────────────── */
+.variant-notice {
+  display: flex; align-items: flex-start; gap: 7px;
+  padding: 8px 14px; background: rgba(79,126,248,.07);
+  border-bottom: 1px solid rgba(79,126,248,.2);
+  font-size: 11.5px; color: var(--accent); line-height: 1.45;
+}
+.variant-notice svg { flex-shrink: 0; margin-top: 1px; }
+.vn-text { flex: 1; }
+.already-tracked {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(34,197,94,.07); border-bottom: 1px solid rgba(34,197,94,.15);
+  padding: 8px 14px; font-size: 11.5px; color: var(--green); font-weight: 500;
 }
 
-function showToast(msg, type = "") {
-  const t = $("toast");
-  t.textContent = msg;
-  t.className = "toast show " + type;
-  setTimeout(() => { t.className = "toast"; }, 3200);
+/* ── Target Section ──────────────────────────────────────────────── */
+.target-section { padding: 13px 14px; background: var(--bg); border-top: 1px solid var(--border); }
+.section-label { font-size: 10px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--text-3); margin-bottom: 8px; }
+.alert-hint { font-size: 11.5px; color: var(--text-2); line-height: 1.45; margin-bottom: 10px; }
+.target-input-row {
+  display: flex; align-items: center; background: var(--bg-2);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden; margin-bottom: 10px; transition: border-color var(--tr);
+}
+.target-input-row:focus-within { border-color: var(--accent); }
+.peso-prefix {
+  padding: 0 10px; color: var(--text-2); font-size: 15px; font-weight: 600;
+  background: var(--bg-3); border-right: 1px solid var(--border);
+  height: 40px; display: flex; align-items: center;
+}
+.target-input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-size: 15px; font-weight: 600;
+  padding: 0 10px; height: 40px;
+}
+.target-input::placeholder { color: var(--text-3); font-weight: 400; font-size: 13px; }
+.target-input::-webkit-outer-spin-button,
+.target-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.tracking-note {
+  font-size: 11px; color: var(--amber);
+  background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.25);
+  border-radius: var(--radius-sm); padding: 7px 10px; margin-bottom: 10px; line-height: 1.45;
+}
+.current-target-row {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  padding: 7px 10px; background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.ct-label { font-size: 11px; color: var(--text-3); }
+.ct-value { font-size: 13px; font-weight: 700; color: var(--accent); }
+
+/* ── Buttons ─────────────────────────────────────────────────────── */
+.btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+  font-size: 12.5px; font-weight: 600; cursor: pointer; border: none; transition: var(--tr);
+}
+.btn-primary  { background: var(--accent); color: #fff; }
+.btn-primary:hover { filter: brightness(1.12); }
+.btn-primary:disabled { opacity: .6; cursor: not-allowed; filter: none; }
+.btn-secondary { background: var(--bg-3); border: 1px solid var(--border-2); color: var(--text); }
+.btn-secondary:hover { background: var(--border); }
+.btn-danger { background: var(--red-dim); border: 1px solid var(--red); color: var(--red); }
+.btn-danger:hover { background: var(--red); color: #fff; }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-sm { padding: 7px 12px; font-size: 12px; width: auto; flex: 1; }
+
+/* ── Tracked List ────────────────────────────────────────────────── */
+#tab-tracked { padding: 12px; }
+#tracked-list { display: flex; flex-direction: column; gap: 8px; }
+.tracked-item {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius); overflow: hidden; transition: border-color var(--tr);
+}
+.tracked-item:hover { border-color: var(--border-2); }
+.ti-headliner {
+  display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+  background: var(--shopee-dim); border-bottom: 1px solid var(--shopee);
+  font-size: 9.5px; font-weight: 800; letter-spacing: 1px; color: #fff; text-transform: uppercase;
+}
+.ti-headliner.lazada { background: var(--lazada-dim); border-bottom-color: var(--lazada); }
+.ti-headliner .ti-check { margin-left: auto; font-size: 9px; font-weight: 400; letter-spacing: 0; color: rgba(255,255,255,.6); text-transform: none; }
+.ti-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--shopee); flex-shrink: 0; }
+.ti-headliner.lazada .ti-dot { background: var(--lazada); }
+.ti-body { display: flex; gap: 10px; align-items: flex-start; padding: 10px; }
+.ti-img {
+  flex-shrink: 0; width: 46px; height: 46px; background: var(--bg-3);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  overflow: hidden; display: grid; place-items: center; font-size: 20px;
+}
+.ti-img img { width: 100%; height: 100%; object-fit: contain; }
+.ti-info { flex: 1; min-width: 0; }
+.ti-name {
+  font-size: 11.5px; font-weight: 500; color: var(--text);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; margin-bottom: 4px; line-height: 1.35;
+}
+.ti-prices { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin-bottom: 3px; }
+.ti-price { font-size: 13px; font-weight: 700; color: var(--green); }
+.ti-alerted {
+  display: inline-flex; align-items: center; gap: 3px; font-size: 10px;
+  background: rgba(34,197,94,.1); border: 1px solid var(--green);
+  color: var(--green); border-radius: 4px; padding: 1px 5px; font-weight: 600;
+}
+.ti-target { font-size: 10.5px; color: var(--text-3); margin-bottom: 4px; }
+.ti-target strong { color: var(--accent); }
+.ti-no-target { color: var(--text-3); font-style: italic; }
+.ti-url {
+  display: block; font-size: 10px; color: var(--accent); text-decoration: none;
+  opacity: .7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 185px; transition: opacity var(--tr);
+}
+.ti-url:hover { opacity: 1; text-decoration: underline; }
+.ti-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; flex-shrink: 0; }
+.ti-history-btn, .ti-remove {
+  background: none; border: none; cursor: pointer;
+  width: 26px; height: 26px; display: grid; place-items: center;
+  border-radius: var(--radius-sm); transition: var(--tr); color: var(--text-3);
+}
+.ti-history-btn:hover { color: var(--accent); background: rgba(79,126,248,.1); }
+.ti-remove:hover { color: var(--red); background: rgba(244,63,94,.1); }
+
+/* ── Alerts Tab ──────────────────────────────────────────────────── */
+#tab-alerts { padding: 10px 12px; }
+.alerts-toolbar { display: flex; gap: 8px; margin-bottom: 8px; }
+.alerts-hint {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--text-3); margin-bottom: 10px; line-height: 1.4;
+}
+#alerts-list { display: flex; flex-direction: column; gap: 7px; }
+.alert-item {
+  display: flex; gap: 9px; align-items: flex-start;
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 10px; border-left-width: 3px;
+}
+.alert-item--target { border-left-color: var(--accent); }
+.alert-item--drop   { border-left-color: var(--green); }
+.alert-item--rise   { border-left-color: var(--amber); }
+.alert-item--change { border-left-color: var(--text-3); }
+.alert-icon { font-size: 18px; flex-shrink: 0; line-height: 1; margin-top: 1px; }
+.alert-body { flex: 1; min-width: 0; }
+.alert-title { font-size: 11.5px; font-weight: 700; margin-bottom: 3px; }
+.alert-msg { font-size: 11px; color: var(--text-2); line-height: 1.45; margin-bottom: 4px; word-break: break-word; }
+.alert-time { font-size: 10px; color: var(--text-3); }
+
+/* ── History Panel (slide-in from right) ────────────────────────── */
+.history-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6);
+  z-index: 40; overflow: hidden;
+}
+.history-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: 100%;
+  background: var(--bg); display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform .28s ease;
+  overflow-y: auto;
+}
+.history-panel.open { transform: translateX(0); }
+.history-header {
+  display: flex; align-items: center; gap: 10px; padding: 11px 13px;
+  background: var(--bg-2); border-bottom: 1px solid var(--border);
+  position: sticky; top: 0; z-index: 5;
+}
+.history-title-wrap { flex: 1; min-width: 0; }
+.history-title {
+  display: block; font-size: 12.5px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.history-platform {
+  display: inline-block; margin-top: 3px; font-size: 9.5px; font-weight: 800;
+  letter-spacing: .8px; padding: 2px 6px; border-radius: 4px; text-transform: uppercase;
+}
+.history-platform.shopee { background: var(--shopee-dim); color: var(--shopee); }
+.history-platform.lazada { background: var(--lazada-dim); color: var(--lazada); }
+
+/* Stats row */
+.history-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr;
+  gap: 1px; background: var(--border); border-bottom: 1px solid var(--border);
+}
+.hstat {
+  background: var(--bg-2); padding: 10px 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+}
+.hstat-label { font-size: 9.5px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.hstat-value { font-size: 12px; font-weight: 700; color: var(--text); text-align: center; word-break: break-word; }
+.hstat-accent { color: var(--accent); }
+.hstat-green  { color: var(--green); }
+.hstat-red    { color: var(--red); }
+
+/* Chart */
+.chart-wrap {
+  padding: 14px; position: relative;
+  background: var(--bg); border-bottom: 1px solid var(--border);
+}
+#price-chart { display: block; width: 100%; }
+.chart-empty {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-align: center; font-size: 12px; color: var(--text-3); line-height: 1.6;
+  padding: 16px;
 }
 
-function showState(id) {
-  ["state-unsupported","state-loading","state-error","state-product"]
-    .forEach(s => { const el = $(s); if (el) el.style.display = "none"; });
-  if (id) $(id).style.display = "";
+/* History edit section */
+.history-edit { padding: 13px 14px; }
+
+/* ── Toast ───────────────────────────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 12px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-3); border: 1px solid var(--border-2);
+  color: var(--text); padding: 8px 16px; border-radius: 20px;
+  font-size: 12px; font-weight: 500; opacity: 0; pointer-events: none;
+  transition: opacity .2s, transform .2s; z-index: 200;
+  white-space: nowrap; max-width: 320px; text-align: center;
 }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.toast.success { border-color: var(--green); color: var(--green); }
+.toast.error   { border-color: var(--red);   color: var(--red);   }
 
-function setHeadliner(platform) {
-  const h = $("platform-headliner");
-  const t = $("platform-headliner-text");
-  h.classList.toggle("lazada", platform === "lazada");
-  t.textContent = platform === "lazada" ? "LAZADA PH" : "SHOPEE PH";
+/* ── Modal ───────────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  z-index: 50; display: grid; place-items: center; padding: 16px;
 }
-
-// ─── Tab Navigation ───────────────────────────────────────────────────────────
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const tab = btn.dataset.tab;
-    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-    document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
-    btn.classList.add("active");
-    $("tab-" + tab).classList.add("active");
-    if (tab === "tracked") renderTrackedList();
-    if (tab === "alerts")  renderAlertsList();
-  });
-});
-
-// ─── Live updates from content script ────────────────────────────────────────
-chrome.runtime.onMessage.addListener(msg => {
-  if (msg.action === "productUpdated" && msg.data?.url === currentProductData?.url && msg.data.price !== null) {
-    currentProductData = msg.data;
-    renderProductCard(msg.data);
-  }
-});
-
-// ─── Load Current Product ────────────────────────────────────────────────────
-async function loadCurrentProduct() {
-  showState("state-loading");
-  let tab;
-  try { [tab] = await chrome.tabs.query({ active: true, currentWindow: true }); }
-  catch (_) { showState("state-unsupported"); return; }
-
-  if (!tab?.url?.match(/shopee\.ph|lazada\.com\.ph/)) {
-    showState("state-unsupported"); return;
-  }
-
-  const ask = () => new Promise((res, rej) => {
-    chrome.tabs.sendMessage(tab.id, { action: "extractProduct" }, r =>
-      chrome.runtime.lastError ? rej(chrome.runtime.lastError) : res(r));
-  });
-  const inject = async () => {
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ["js/content.js"] });
-    await new Promise(r => setTimeout(r, 700));
-    return ask();
-  };
-
-  try {
-    let res;
-    try { res = await ask(); } catch (_) { res = await inject(); }
-    if (!res?.data) throw new Error("No data");
-    handleExtractedData(res.data);
-  } catch (_) {
-    try {
-      const res = await inject();
-      handleExtractedData(res?.data);
-    } catch (_2) {
-      $("error-title").textContent = "Couldn't connect";
-      $("error-msg").textContent   = "Make sure you are on a Shopee PH or Lazada PH product page and the page is fully loaded.";
-      showState("state-error");
-    }
-  }
+.modal {
+  background: var(--bg-2); border: 1px solid var(--border-2);
+  border-radius: var(--radius); width: 100%; max-width: 300px; overflow: hidden;
 }
-
-async function handleExtractedData(data) {
-  if (!data) {
-    $("error-title").textContent = "No data received";
-    $("error-msg").textContent   = "Try refreshing the product page.";
-    showState("state-error"); return;
-  }
-  currentProductData = data;
-  if (data.error === "not_a_product_page") {
-    $("error-title").textContent = "Not a product page";
-    $("error-msg").textContent   = "Open a specific product listing on Shopee PH or Lazada PH.";
-    showState("state-error"); return;
-  }
-  if (data.error || data.price === null) {
-    $("error-title").textContent = "Couldn't read product";
-    $("error-msg").textContent   = data.error || "Could not read the price. Select a variant first if available.";
-    showState("state-error"); return;
-  }
-  renderProductCard(data);
-  await checkIfTracked(data.url);
-  showState("state-product");
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid var(--border);
 }
-
-function renderProductCard(data) {
-  setHeadliner(data.platform);
-  const imgEl  = $("product-img");
-  const imgWrap = imgEl.parentElement;
-  if (data.image) {
-    imgEl.src = data.image; imgEl.style.display = "";
-    imgEl.onerror = () => { imgEl.style.display = "none"; if (!imgWrap.querySelector(".no-img")) imgWrap.innerHTML = '<span class="no-img">🛍️</span>'; };
-  } else { imgEl.style.display = "none"; imgWrap.innerHTML = '<span class="no-img">🛍️</span>'; }
-  $("product-name").textContent  = data.name;
-  $("product-price").textContent = fmtDisplay(data);
-  const vn = $("variant-notice");
-  if (data.isRange) {
-    vn.style.display = "flex";
-    vn.querySelector(".vn-text").textContent = "Price range detected. Select a variant for an exact price, then click refresh.";
-  } else { vn.style.display = "none"; }
-}
-
-async function checkIfTracked(url) {
-  const products = await DB.getAllProducts();
-  currentTrackedProduct = products.find(p => p.url === url) || null;
-  if (currentTrackedProduct) {
-    $("already-tracked").style.display = "flex";
-    $("target-section").style.display  = "none";
-    $("update-section").style.display  = "";
-    $("current-target-display").textContent = currentTrackedProduct.targetPrice ? fmt(currentTrackedProduct.targetPrice) : "Not set";
-    $("update-price-input").value = currentTrackedProduct.targetPrice || "";
-  } else {
-    $("already-tracked").style.display = "none";
-    $("target-section").style.display  = "";
-    $("update-section").style.display  = "none";
-    $("target-price-input").value = "";
-    const tn = $("tracking-note");
-    if (currentProductData?.isRange) {
-      tn.style.display  = "";
-      tn.textContent = `⚠ Range detected. Lower bound (${fmt(currentProductData.priceMin)}) will be used for tracking. Select a variant for exact tracking.`;
-    } else { tn.style.display = "none"; }
-  }
-}
-
-// ─── Track ────────────────────────────────────────────────────────────────────
-$("btn-track").addEventListener("click", async () => {
-  if (!currentProductData) return;
-  const v = parseFloat($("target-price-input").value);
-  if (!$("target-price-input").value || isNaN(v) || v <= 0) {
-    showToast("Please enter a valid target price.", "error"); return;
-  }
-  const r = await DB.saveProduct({
-    name: currentProductData.name, url: currentProductData.url,
-    platform: currentProductData.platform, image: currentProductData.image,
-    price: currentProductData.price, priceMin: currentProductData.priceMin,
-    priceMax: currentProductData.priceMax, isRange: currentProductData.isRange,
-    displayPrice: currentProductData.displayPrice, targetPrice: v,
-  });
-  if (r.success) {
-    await DB.addHistoryEntry(r.product.id, currentProductData.price);
-    currentTrackedProduct = r.product;
-    showToast("✓ Product is now being tracked!", "success");
-    await checkIfTracked(currentProductData.url);
-    await updateBadges();
-  } else { showToast(r.error || "Could not add product.", "error"); }
-});
-
-$("btn-update-target").addEventListener("click", async () => {
-  if (!currentTrackedProduct) return;
-  const v = parseFloat($("update-price-input").value);
-  if (!$("update-price-input").value || isNaN(v) || v <= 0) {
-    showToast("Please enter a valid target price.", "error"); return;
-  }
-  await DB.updateProduct(currentTrackedProduct.id, { targetPrice: v, alerted: false });
-  currentTrackedProduct.targetPrice = v;
-  $("current-target-display").textContent = fmt(v);
-  showToast("✓ Target updated!", "success");
-});
-
-$("btn-remove").addEventListener("click", async () => {
-  if (!currentTrackedProduct) return;
-  if (!confirm(`Remove "${currentTrackedProduct.name}" from tracking?`)) return;
-  await DB.removeProduct(currentTrackedProduct.id);
-  currentTrackedProduct = null;
-  showToast("Product removed.", "");
-  await checkIfTracked(currentProductData.url);
-  await updateBadges();
-});
-
-$("btn-retry").addEventListener("click",   () => loadCurrentProduct());
-$("btn-refresh").addEventListener("click", () => loadCurrentProduct());
-
-// ─── Tracked List ─────────────────────────────────────────────────────────────
-async function renderTrackedList() {
-  const products = await DB.getAllProducts();
-  const list = $("tracked-list");
-  list.innerHTML = "";
-  if (!products.length) { $("tracked-empty").style.display = ""; return; }
-  $("tracked-empty").style.display = "none";
-
-  products.forEach(p => {
-    const isLazada = p.platform === "lazada";
-    const imgHtml  = p.image ? `<img src="${p.image}" alt="" onerror="this.style.display='none'">` : "🛍️";
-    const priceDisp = p.isRange && p.priceMin && p.priceMax
-      ? `${fmt(p.priceMin)} – ${fmt(p.priceMax)}`
-      : fmt(p.lastPrice ?? p.price);
-    const targetTxt = p.targetPrice
-      ? `Alert: <strong>${fmt(p.targetPrice)}</strong>`
-      : `<span class="ti-no-target">No target set</span>`;
-    const alertBadge = p.alerted ? `<span class="ti-alerted">✓ Alerted</span>` : "";
-    let displayUrl = "";
-    try { const u = new URL(p.url); displayUrl = u.hostname.replace("www.","") + u.pathname.slice(0,28) + "…"; }
-    catch (_) { displayUrl = p.url.slice(0, 36) + "…"; }
-
-    const el = document.createElement("div");
-    el.className = "tracked-item";
-    el.innerHTML = `
-      <div class="ti-headliner ${isLazada?"lazada":""}">
-        <span class="ti-dot"></span>
-        <span>${isLazada?"LAZADA PH":"SHOPEE PH"}</span>
-        <span class="ti-check">${timeAgo(p.lastChecked)}</span>
-      </div>
-      <div class="ti-body">
-        <div class="ti-img">${imgHtml}</div>
-        <div class="ti-info">
-          <div class="ti-name">${p.name}</div>
-          <div class="ti-prices"><span class="ti-price">${priceDisp}</span>${alertBadge}</div>
-          <div class="ti-target">${targetTxt}</div>
-          <a class="ti-url" href="${p.url}" data-url="${p.url}" title="${p.url}">${displayUrl}</a>
-        </div>
-        <div class="ti-actions">
-          <button class="ti-history-btn" data-id="${p.id}" title="View price history">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-          </button>
-          <button class="ti-remove" data-id="${p.id}" title="Remove">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-          </button>
-        </div>
-      </div>`;
-    list.appendChild(el);
-  });
-
-  // History button
-  list.querySelectorAll(".ti-history-btn").forEach(btn => {
-    btn.addEventListener("click", async e => {
-      e.stopPropagation();
-      const p = products.find(x => x.id === btn.dataset.id);
-      if (p) await openHistoryPanel(p);
-    });
-  });
-
-  // Remove button
-  list.querySelectorAll(".ti-remove").forEach(btn => {
-    btn.addEventListener("click", async e => {
-      e.stopPropagation();
-      const p = products.find(x => x.id === btn.dataset.id);
-      if (!p || !confirm(`Remove "${p.name}"?`)) return;
-      await DB.removeProduct(p.id);
-      showToast("Product removed.", "");
-      await updateBadges();
-      renderTrackedList();
-    });
-  });
-
-  // URL links
-  list.querySelectorAll(".ti-url").forEach(a => {
-    a.addEventListener("click", e => {
-      e.preventDefault();
-      chrome.tabs.create({ url: a.dataset.url });
-    });
-  });
-}
-
-// ─── History Panel ────────────────────────────────────────────────────────────
-async function openHistoryPanel(product) {
-  historyProductId = product.id;
-  const history    = await DB.getHistory(product.id);
-
-  // Header
-  $("history-product-name").textContent = product.name;
-  const pb = $("history-platform-badge");
-  pb.textContent  = product.platform === "lazada" ? "LAZADA PH" : "SHOPEE PH";
-  pb.className    = "history-platform " + (product.platform === "lazada" ? "lazada" : "shopee");
-
-  // Stats
-  const prices    = history.map(e => e.price);
-  const current   = product.lastPrice ?? product.price;
-  const lo        = prices.length ? Math.min(...prices) : null;
-  const hi        = prices.length ? Math.max(...prices) : null;
-
-  $("hstat-current").textContent = fmt(current);
-  $("hstat-target").textContent  = product.targetPrice ? fmt(product.targetPrice) : "Not set";
-  $("hstat-low").textContent     = fmt(lo);
-  $("hstat-high").textContent    = fmt(hi);
-
-  // Target input
-  $("history-target-input").value = product.targetPrice || "";
-
-  // Chart
-  const chartEmpty = $("chart-empty");
-  if (history.length < 2) {
-    chartEmpty.style.display = "";
-    const canvas = $("price-chart");
-    const ctx    = canvas.getContext("2d");
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-  } else {
-    chartEmpty.style.display = "none";
-    PriceChart.render("price-chart", history, product.targetPrice);
-  }
-
-  // Show panel
-  $("history-overlay").style.display = "";
-  requestAnimationFrame(() => $("history-panel").classList.add("open"));
-}
-
-function closeHistoryPanel() {
-  $("history-panel").classList.remove("open");
-  setTimeout(() => { $("history-overlay").style.display = "none"; }, 280);
-  historyProductId = null;
-}
-
-$("btn-history-close").addEventListener("click", closeHistoryPanel);
-$("history-overlay").addEventListener("click", e => { if (e.target === $("history-overlay")) closeHistoryPanel(); });
-
-$("btn-history-save-target").addEventListener("click", async () => {
-  if (!historyProductId) return;
-  const v = parseFloat($("history-target-input").value);
-  if (!$("history-target-input").value || isNaN(v) || v <= 0) {
-    showToast("Please enter a valid target price.", "error"); return;
-  }
-  await DB.updateProduct(historyProductId, { targetPrice: v, alerted: false });
-  showToast("✓ Target updated!", "success");
-  // Re-render chart with new target line
-  const products = await DB.getAllProducts();
-  const p        = products.find(x => x.id === historyProductId);
-  if (p) { p.targetPrice = v; await openHistoryPanel(p); }
-  renderTrackedList();
-});
-
-$("btn-history-remove").addEventListener("click", async () => {
-  if (!historyProductId) return;
-  const products = await DB.getAllProducts();
-  const p        = products.find(x => x.id === historyProductId);
-  if (!p || !confirm(`Remove "${p.name}"?`)) return;
-  await DB.removeProduct(historyProductId);
-  closeHistoryPanel();
-  showToast("Product removed.", "");
-  await updateBadges();
-  renderTrackedList();
-});
-
-// ─── Alerts ───────────────────────────────────────────────────────────────────
-async function renderAlertsList() {
-  const raw  = null // use chrome.storage below;
-  const logs = raw ? JSON.parse(raw) : [];
-  const list = $("alerts-list");
-  list.innerHTML = "";
-  if (!logs.length) { $("alerts-empty").style.display = ""; return; }
-  $("alerts-empty").style.display = "none";
-  const icons = { target: "🎯", drop: "📉", rise: "📈", change: "🔄" };
-  [...logs].reverse().forEach(log => {
-    const el = document.createElement("div");
-    el.className = `alert-item alert-item--${log.type || "change"}`;
-    const time = new Date(log.timestamp).toLocaleString("en-PH", {
-      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
-    });
-    el.innerHTML = `
-      <div class="alert-icon">${icons[log.type] || "🔔"}</div>
-      <div class="alert-body">
-        <div class="alert-title">${log.title}</div>
-        <div class="alert-msg">${log.message.replace(/\n/g, " • ")}</div>
-        <div class="alert-time">${time}</div>
-      </div>`;
-    list.appendChild(el);
-  });
-}
-
-$("btn-force-check").addEventListener("click", async () => {
-  const products = await DB.getAllProducts();
-  if (!products.length) { showToast("No products being tracked yet.", ""); return; }
-  const btn = $("btn-force-check");
-  btn.disabled    = true;
-  btn.textContent = "Checking…";
-  try {
-    await new Promise((res, rej) => {
-      chrome.runtime.sendMessage({ action: "triggerCheck" }, r =>
-        chrome.runtime.lastError ? rej(chrome.runtime.lastError) : res(r));
-    });
-    showToast("✓ Price check complete!", "success");
-  } catch (_) { showToast("Check running in background.", "success"); }
-  finally {
-    btn.disabled  = false;
-    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Check Prices Now`;
-    await renderAlertsList();
-    await updateBadges();
-    await renderTrackedList();
-  }
-});
-
-$("btn-clear-alerts").addEventListener("click", async () => {
-  if (!confirm("Clear all alert history?")) return;
-  null // handled below;
-  showToast("Alert log cleared.", "");
-  renderAlertsList();
-  updateBadges();
-});
-
-// ─── Test Notification ────────────────────────────────────────────────────────
-$("btn-test-notif").addEventListener("click", () => {
-  chrome.notifications.create(`test-${Date.now()}`, {
-    type: "basic", iconUrl: "icons/icon128.png",
-    title: "🎯 PriceWatch PH — Test",
-    message: "Notifications are working! You'll be alerted when a tracked price is met.",
-    priority: 2,
-  });
-  showToast("Test notification sent!", "success");
-});
-
-// ─── Export ───────────────────────────────────────────────────────────────────
-$("btn-export").addEventListener("click", () => { $("export-modal").style.display = ""; });
-$("btn-modal-close").addEventListener("click", () => { $("export-modal").style.display = "none"; });
-$("export-modal").addEventListener("click", e => { if (e.target === $("export-modal")) $("export-modal").style.display = "none"; });
-
-$("btn-export-json").addEventListener("click", async () => {
-  const data = await DB.exportData();
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = `pricewatch-ph-${new Date().toISOString().slice(0,10)}.json`;
-  a.click(); URL.revokeObjectURL(url);
-  $("export-modal").style.display = "none";
-  showToast("✓ JSON exported!", "success");
-});
-
-$("btn-export-csv").addEventListener("click", async () => {
-  const data = await DB.exportData();
-  const rows = [["Product Name","Platform","URL","Current Price","Price Min","Price Max","Is Range","Target Price","Added At","Last Checked","Alerted"]];
-  data.products.forEach(p => rows.push([
-    `"${(p.name||"").replace(/"/g,'""')}"`,
-    p.platform === "lazada" ? "Lazada PH" : "Shopee PH",
-    p.url, p.lastPrice??p.price??"", p.priceMin??"", p.priceMax??"",
-    p.isRange?"Yes":"No", p.targetPrice??"", p.addedAt??"", p.lastChecked??"", p.alerted?"Yes":"No",
-  ]));
-  const blob = new Blob([rows.map(r=>r.join(",")).join("\n")], { type: "text/csv" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = `pricewatch-ph-${new Date().toISOString().slice(0,10)}.csv`;
-  a.click(); URL.revokeObjectURL(url);
-  $("export-modal").style.display = "none";
-  showToast("✓ CSV exported!", "success");
-});
-
-// ─── Import ───────────────────────────────────────────────────────────────────
-$("btn-import").addEventListener("click", () => $("import-file-input").click());
-
-$("import-file-input").addEventListener("change", async e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  try {
-    const text   = await file.text();
-    const result = await DB.importData(text);
-    if (result.success) {
-      showToast(`✓ Imported ${result.imported} product(s). Skipped ${result.skipped} duplicates.`, "success");
-      await updateBadges();
-      renderTrackedList();
-    } else { showToast(result.error || "Import failed.", "error"); }
-  } catch (_) { showToast("Invalid file. Please use a PriceWatch PH JSON export.", "error"); }
-  e.target.value = ""; // reset so same file can be re-imported
-});
-
-// ─── Badge counts ─────────────────────────────────────────────────────────────
-async function updateBadges() {
-  const products = await DB.getAllProducts();
-  $("tracked-count").textContent = products.length;
-
-  const raw  = null // use chrome.storage below;
-  const logs = raw ? JSON.parse(raw) : [];
-  const ac   = $("alerts-count");
-  ac.textContent    = logs.length;
-  ac.style.display  = logs.length > 0 ? "" : "none";
-}
-
-// ─── Init ─────────────────────────────────────────────────────────────────────
-(async function init() {
-  await updateBadges();
-  await loadCurrentProduct();
-})();
-
-// ── Override notif log to use chrome.storage.local (shared with service worker)
-async function getNotifLog() {
-  return new Promise(res => chrome.storage.local.get("pw_notif_log", r => {
-    const raw = r["pw_notif_log"];
-    res(raw ? JSON.parse(raw) : []);
-  }));
-}
-
-// Re-define renderAlertsList and updateBadges to use chrome.storage
-const _renderAlertsList = async function() {
-  const logs = await getNotifLog();
-  const list = document.getElementById("alerts-list");
-  list.innerHTML = "";
-  if (!logs.length) { document.getElementById("alerts-empty").style.display = ""; return; }
-  document.getElementById("alerts-empty").style.display = "none";
-  const icons = { target: "🎯", drop: "📉", rise: "📈", change: "🔄" };
-  [...logs].reverse().forEach(log => {
-    const el = document.createElement("div");
-    el.className = `alert-item alert-item--${log.type||"change"}`;
-    const time = new Date(log.timestamp).toLocaleString("en-PH",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-    el.innerHTML = `<div class="alert-icon">${icons[log.type]||"🔔"}</div><div class="alert-body"><div class="alert-title">${log.title}</div><div class="alert-msg">${log.message.replace(/\n/g," • ")}</div><div class="alert-time">${time}</div></div>`;
-    list.appendChild(el);
-  });
-};
-
-document.getElementById("btn-clear-alerts").addEventListener("click", async () => {
-  if (!confirm("Clear all alert history?")) return;
-  await new Promise(res => chrome.storage.local.remove("pw_notif_log", res));
-  showToast("Alert log cleared.", "");
-  await _renderAlertsList();
-  await _updateBadges();
-}, { once: false });
-
-async function _updateBadges() {
-  const p = await DB.getAllProducts();
-  document.getElementById("tracked-count").textContent = p.length;
-  const logs = await getNotifLog();
-  const ac = document.getElementById("alerts-count");
-  ac.textContent   = logs.length;
-  ac.style.display = logs.length > 0 ? "" : "none";
-}
-
-// Patch tab click for alerts to use new fn
-document.querySelectorAll(".tab-btn").forEach(btn => {
-  if (btn.dataset.tab === "alerts") {
-    btn.addEventListener("click", () => _renderAlertsList());
-  }
-});
+.modal-title { font-size: 13px; font-weight: 700; }
+.modal-body { padding: 14px; }
+.modal-desc { font-size: 12px; color: var(--text-2); margin-bottom: 12px; line-height: 1.5; }
+.export-options { display: flex; flex-direction: column; gap: 8px; }
