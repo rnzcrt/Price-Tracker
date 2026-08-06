@@ -38,8 +38,7 @@ body {
   width: 360px;
   min-height: 200px;
   max-height: 600px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
 }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -134,7 +133,11 @@ body {
 }
 
 /* Tab Panels */
-.tab-panel { display: none; }
+.tab-panel { 
+  display: none;
+  height: calc(600px - 92px); /* adjust based on your header + tabs height */
+    overflow-y: auto; 
+}
 .tab-panel.active { display: block; }
 
 /* States */
@@ -645,7 +648,9 @@ body {
 .modal-title { font-size: 13px; font-weight: 700; }
 .modal-body { padding: 14px; }
 .modal-desc { font-size: 12px; color: var(--text-2); margin-bottom: 12px; line-height: 1.5; }
-.export-options { display: flex; flex-direction: column; gap: 8px; }
+.export-options { display: flex; flex-direction: column; gap: 12px; }
+.export-option { display: flex; flex-direction: column; gap: 4px; }
+.export-option-desc { font-size: 11px; color: var(--text-2); margin: 0 0 0 2px; line-height: 1.4; }
 
 /* Tracked item additions */
 .ti-headliner {

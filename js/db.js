@@ -128,7 +128,12 @@ const DB = {
 
   // Import
   async importData(jsonData) {
-    const data = typeof jsonData === "string" ? JSON.parse(jsonData) : jsonData;
+    let data;
+    try {
+      data = typeof jsonData === "string" ? JSON.parse(jsonData) : jsonData;
+    } catch (_) {
+      return { success: false, error: "That file isn't valid JSON. Only files from \"Download JSON\" can be imported — CSV exports are for viewing only." };
+    }
     if (!data.products || !Array.isArray(data.products))
       return { success: false, error: "Invalid import file format." };
 

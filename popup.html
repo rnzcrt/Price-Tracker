@@ -224,14 +224,20 @@
       <div class="modal-body">
         <p class="modal-desc">Download all tracked products and price history. Use this to back up data before switching devices.</p>
         <div class="export-options">
-          <button class="btn btn-primary" id="btn-export-json">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Download JSON
-          </button>
-          <button class="btn btn-secondary" id="btn-export-csv">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            Download CSV
-          </button>
+          <div class="export-option">
+            <button class="btn btn-primary" id="btn-export-json">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Download JSON
+            </button>
+            <p class="export-option-desc">Full backup. Use this if you plan to import it back in later.</p>
+          </div>
+          <div class="export-option">
+            <button class="btn btn-secondary" id="btn-export-csv">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Download CSV
+            </button>
+            <p class="export-option-desc">For viewing in Excel/Sheets only — can't be imported back into this extension.</p>
+          </div>
         </div>
       </div>
     </div>
