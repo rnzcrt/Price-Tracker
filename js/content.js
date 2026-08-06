@@ -270,13 +270,7 @@
     if (!isVisible(el)) return null;
     if (hasMultipleLabeledChildren(el)) return null; // wrapper holding multiple chips, not one chip
     const text = el.textContent.trim();
-    // 70, not 30: real seller-written variant names can run long (e.g.
-    // "Qingxi zhiling pro 50g canned (upgraded isuzu)" at 46 chars was
-    // being silently rejected by the old, tighter cap). Genuine noise
-    // text (paragraphs, descriptions) tends to run well past 70 anyway,
-    // so this still filters that out without cutting off real long
-    // variant names.
-    if (!text || text.length > 70) return null;
+    if (!text || text.length > 30) return null;
     const checkText = stripTrailingCount(text);
     if (NOISE_TEXT_RE.test(checkText) || RATING_PATTERN_RE.test(text) || PRICE_LIKE_RE.test(text) || SHIP_DATE_RE.test(text) || AVG_TIME_RE.test(text)) return null;
     return text;
@@ -320,7 +314,7 @@
     if (tag === "SELECT" || tag === "OPTION" || tag === "SCRIPT" || tag === "STYLE" || tag === "INPUT") return false;
     if (!isVisible(el)) return false;
     const text = el.textContent.trim();
-    if (!text || text.length > 70) return false; // see sanitizeChipText for why 70, not a tighter cap
+    if (!text || text.length > 24) return false;
     const checkText = stripTrailingCount(text);
     if (NOISE_TEXT_RE.test(checkText) || RATING_PATTERN_RE.test(text) || PRICE_LIKE_RE.test(text) || SHIP_DATE_RE.test(text) || AVG_TIME_RE.test(text) || isVariantLabelText(el)) return false;
     if (hasMultipleLabeledChildren(el)) return false;
@@ -429,7 +423,7 @@
     while (sib && hops < 2) {
       if (sib.children.length === 0 && isVisible(sib)) {
         const text = sib.textContent.trim();
-        if (text && text.length <= 70 && !isVariantLabelText(sib) &&
+        if (text && text.length <= 40 && !isVariantLabelText(sib) &&
             !NOISE_TEXT_RE.test(text) && !RATING_PATTERN_RE.test(text) &&
             !BAD_VALUE_RE.test(text) && !SHIP_DATE_RE.test(text) && !AVG_TIME_RE.test(text) && !/[₱$]/.test(text)) {
           return text;
@@ -630,7 +624,7 @@
       const label = m[1].trim();
       const value = m[2].trim();
       if (EXCLUDE_LABEL_WORDS_RE.test(label)) return;
-      if (!value || value.length > 70) return;
+      if (!value || value.length > 40) return;
       if (RATING_PATTERN_RE.test(value) || NOISE_TEXT_RE.test(value) || BAD_VALUE_RE.test(value) || SHIP_DATE_RE.test(value) || AVG_TIME_RE.test(value)) return;
       if (PRICE_LIKE_RE.test(value)) return; // a price/coupon, not a variant value
       const key = normalizeLabel(label);
@@ -801,13 +795,36 @@
       if (!axisValues || !axisValues.length) return null;
       if (axisValues.length !== item.tier_variations.length) return null;
 
-      const tierIndex = [];
-      for (let i = 0; i < item.tier_variations.length; i++) {
-        const options = item.tier_variations[i].options || [];
-        const val = String(axisValues[i] || "").trim().toLowerCase();
-        const idx = options.findIndex(o => String(o || "").trim().toLowerCase() === val);
-        if (idx === -1) return null; // couldn't confidently match this axis — bail rather than guess
-        tierIndex.push(idx);
+      // Match each selected value to whichever tier_variation actually
+      // CONTAINS it, rather than assuming axisValues[i] lines up
+      // positionally with item.tier_variations[i]. The DOM order our
+      // values were read in (however the page visually lists Color vs
+      // Size) is not guaranteed to match the API's internal order, and
+      // on a re-check these values come back out of storage rather than
+      // fresh off the page, so a positional assumption isn't safe even
+      // if it happens to hold on any one page. Matching by content has
+      // no such assumption.
+      const remaining = axisValues.map(v => String(v || "").trim().toLowerCase());
+      const tierIndex = new Array(item.tier_variations.length).fill(-1);
+
+      for (let tierPos = 0; tierPos < item.tier_variations.length; tierPos++) {
+        const options = item.tier_variations[tierPos].options || [];
+        let matchedAt = -1, usedSlot = -1;
+        for (let vi = 0; vi < remaining.length; vi++) {
+          if (remaining[vi] === null) continue; // already matched to an earlier tier
+          const idx = options.findIndex(o => String(o || "").trim().toLowerCase() === remaining[vi]);
+          if (idx !== -1) { matchedAt = idx; usedSlot = vi; break; }
+        }
+        if (matchedAt === -1) {
+          logVariantDebug({
+            stage: "model-match-fail", tierPos,
+            tierLabel: item.tier_variations[tierPos].name || null,
+            options, axisValues,
+          });
+          return null; // this tier's option wasn't found in any of our axisValues — bail, don't guess
+        }
+        tierIndex[tierPos] = matchedAt;
+        remaining[usedSlot] = null;
       }
 
       const matches = item.models.filter(m =>
@@ -815,7 +832,10 @@
         m.tier_index.length === tierIndex.length &&
         m.tier_index.every((v, i) => v === tierIndex[i])
       );
-      if (matches.length !== 1) return null; // no match, or an ambiguous one — don't guess
+      if (matches.length !== 1) {
+        logVariantDebug({ stage: "model-match-ambiguous", tierIndex, matchCount: matches.length });
+        return null; // no match, or an ambiguous one — don't guess
+      }
 
       const model = matches[0];
       const rawPrice = model.price_min || model.price;
@@ -903,7 +923,10 @@
     try {
       // URL pattern: https://shopee.ph/product-name-i.{shopId}.{itemId}
       const match = (pageUrl || window.location.href).match(/-i\.(\d+)\.(\d+)/);
-      if (!match) return null;
+      if (!match) {
+        logVariantDebug({ stage: "api-no-url-match", result: null, pageUrl });
+        return null;
+      }
 
       const shopId = match[1];
       const itemId = match[2];
@@ -913,12 +936,21 @@
         `/api/v4/item/get?itemid=${encodeURIComponent(itemId)}&shopid=${encodeURIComponent(shopId)}`,
         { credentials: "same-origin" }
       );
-      if (!resp.ok) return null;
+      if (!resp.ok) {
+        logVariantDebug({ stage: "api-http-not-ok", result: null, buyButtonTop: resp.status });
+        return null;
+      }
 
       const json = await resp.json();
       const item = json?.data;
-      console.log("SHOPEE_ITEM:", JSON.stringify(item));
-      if (!item) return null;
+      if (!item) {
+        // Common cause: something on the page (an ad blocker or privacy
+        // extension) is blocking this request outright, so it never gets
+        // a real response body to read from. Check the Network tab for
+        // this exact request if this fires.
+        logVariantDebug({ stage: "api-empty-response", result: null, buyButtonTop: json });
+        return null;
+      }
 
       const fmtPHP = n => n.toLocaleString("en-PH", { minimumFractionDigits: 2 });
 
@@ -939,13 +971,19 @@
       // prices are in micro-units (1 PHP = 100,000). both 0 if out of stock.
       const rawMin = item.price_min ?? item.price;
       const rawMax = item.price_max ?? item.price;
-      if (!rawMin || rawMin <= 0) return null;
+      if (!rawMin || rawMin <= 0) {
+        logVariantDebug({ stage: "api-item-price-missing", result: null, buyButtonTop: { rawMin, rawMax } });
+        return null;
+      }
 
       const priceMin = rawMin / 100000;
       const priceMax = (rawMax && rawMax > 0) ? rawMax / 100000 : priceMin;
 
       // sanity check — reject anything outside a plausible price range
-      if (priceMin < 1 || priceMin > 999999) return null;
+      if (priceMin < 1 || priceMin > 999999) {
+        logVariantDebug({ stage: "api-item-price-implausible", result: null, buyButtonTop: priceMin });
+        return null;
+      }
 
       const isRange = priceMax > priceMin;
       const lo = priceMin;
@@ -962,7 +1000,8 @@
         // also expose the product name in case the DOM has no h1 yet
         apiName: item.name || null,
       };
-    } catch (_) {
+    } catch (err) {
+      logVariantDebug({ stage: "api-exception", result: null, buyButtonTop: String(err && err.message || err) });
       return null; // falls back to DOM extraction
     }
   }
@@ -980,7 +1019,12 @@
     }
   }
 
-  async function extractProductData() {
+  async function extractProductData(pinnedAxisValues = null) {
+    // pinnedAxisValues: when a re-check already knows which variant combo
+    // was originally tracked (passed in from storage via background.js),
+    // it overrides whatever happens to be selected on this fresh page
+    // load, so a Shopee background/hidden-tab check re-prices the SAME
+    // variant instead of silently falling back to the item's cheapest one.
     const platform = detectPlatform();
     if (!platform) return null;
 
@@ -1009,7 +1053,10 @@
       // Retries internally if a real variant panel exists but hasn't
       // resolved a selection yet (timing race on page load).
       const axesMap = sel ? await resolveVariantAxesMapWithRetry(sel) : new Map();
-      const axisValues = [...axesMap.values()];
+      // var, not const — same escape hatch as shopeeVariant below, needed
+      // so this is still readable after the if-block ends (used down by
+      // the return statements to persist it for future re-checks).
+      var axisValues = pinnedAxisValues || [...axesMap.values()];
 
       // try the API first (see fetchShopeeApiPrice above) — works in hidden tabs too
       const apiResult = await fetchShopeeApiPrice(window.location.href, axisValues);
@@ -1018,11 +1065,20 @@
         if (apiResult.apiName) name = apiResult.apiName;
       }
 
-      // DOM fallback if the API call failed — only reliable in a visible tab
-      if (!priceResult) {
+      // DOM fallback if the API call failed — only reliable in a visible
+      // tab, AND only trustworthy when no specific variant was requested.
+      // A plain DOM read has no concept of "which variant" — it just
+      // reads whatever price happens to be showing. On a fresh page load
+      // where nothing's been manually re-selected, that's often the
+      // default/cheapest-looking price, not the one being tracked. So
+      // when pinnedAxisValues asked for a SPECIFIC variant and the API
+      // couldn't confirm a match for it, reporting no price this time is
+      // safer than confidently reporting the wrong variant's price.
+      const wantedSpecificVariant = pinnedAxisValues && pinnedAxisValues.length > 0;
+      if (!priceResult && !wantedSpecificVariant) {
         priceResult = sel ? extractWithSelectors(sel.price, sel.priceExcludeStyle) : null;
       }
-      if (!priceResult) priceResult = shopeeStructuralPriceFallback();
+      if (!priceResult && !wantedSpecificVariant) priceResult = shopeeStructuralPriceFallback();
 
       if (!name) name  = sel ? extractNameWithSelectors(sel.name) : null;
       image = sel ? extractImageShopee(sel.image) : null;
@@ -1053,9 +1109,15 @@
 
     const finalName = name || document.title || "Unknown Product";
 
+    // Only meaningful for Shopee (Lazada's price path doesn't use axis
+    // pinning); stays an empty array there so it's always a safe field
+    // to store regardless of platform.
+    const returnedAxisValues = platform === "shopee" ? axisValues : [];
+
     if (!priceResult) {
       return {
         platform, url: window.location.href, name: finalName, variant,
+        axisValues: returnedAxisValues,
         price: null, priceMin: null, priceMax: null,
         isRange: false, displayPrice: null, image,
         extractedAt: new Date().toISOString(),
@@ -1065,6 +1127,7 @@
 
     return {
       platform, url: window.location.href, name: finalName, variant,
+      axisValues: returnedAxisValues,
       price: priceResult.price, priceMin: priceResult.priceMin,
       priceMax: priceResult.priceMax, isRange: priceResult.isRange,
       displayPrice: priceResult.displayPrice, image,
@@ -1131,7 +1194,12 @@
   // the service worker alive.
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.action !== "extractProduct" && msg.action !== "checkPrice") return;
-    extractProductData().then(data => sendResponse({ success: true, data }));
+    // msg.axisValues is only set by background.js during a re-check of an
+    // already-tracked Shopee product with a stored variant (see
+    // extractPriceViaTab in background.js). Undefined for a first-time
+    // "extractProduct" look, or any product that predates this fix —
+    // both fall back to resolving fresh from the page, same as before.
+    extractProductData(msg.axisValues || null).then(data => sendResponse({ success: true, data }));
     return true; // keep channel open for the async response
   });
 })();

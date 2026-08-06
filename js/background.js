@@ -42,7 +42,7 @@ function isPlausiblePriceReading(newPrice, referencePrice) {
 // hourly alarm. It switches back to whatever tab you were on right after.
 // That means the automatic background check can sometimes miss a Shopee
 // price update — a real platform limitation, noted in the paper.
-async function extractPriceViaTab(url, platform, interactive) {
+async function extractPriceViaTab(url, platform, interactive, axisValues) {
   const useActiveTab = platform === "shopee" && interactive === true;
 
   // remember the tab so we can switch back to it after
@@ -77,7 +77,7 @@ async function extractPriceViaTab(url, platform, interactive) {
 
     while (Date.now() - retryStart < RETRY_BUDGET_MS) {
       try {
-        const resp = await chrome.tabs.sendMessage(tab.id, { action: "checkPrice" });
+        const resp = await chrome.tabs.sendMessage(tab.id, { action: "checkPrice", axisValues });
         const p = resp?.data?.price ?? null;
         if (resp?.data?.error === "not_a_product_page") break;
         if (p != null) {
@@ -109,7 +109,7 @@ async function checkSingleProduct(product, interactive = false) {
                     : product.url.includes("lazada.com.ph") ? "lazada"
                     : (product.platform || null);
 
-    const currentPrice = await extractPriceViaTab(product.url, platform, interactive);
+    const currentPrice = await extractPriceViaTab(product.url, platform, interactive, product.axisValues || null);
 
     if (currentPrice == null) {
       const hint = platform === "shopee" && !interactive

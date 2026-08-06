@@ -136,20 +136,48 @@ async function renderCurrentProduct(data) {
     $("current-target-display").textContent = tracked.targetPrice != null ? fmt(tracked.targetPrice) : "None set";
     $("update-price-input").value = tracked.targetPrice != null ? tracked.targetPrice : "";
 
-    // Backfill variant/image/name on products that are missing them —
-    // either tracked before this data existed, or imported from a source
-    // that never had it (e.g. a CSV-to-JSON conversion, which has no
-    // image URLs at all). Revisiting the product's real page with the
-    // popup open is enough to self-heal these, no re-import needed.
+    // Backfill ONLY missing data — never overwrite an already-tracked
+    // variant just because the shopper is now looking at a different one
+    // on the page. Two cases this fills in:
+    //  1. No variant stored at all (tracked before this feature existed).
+    //  2. Variant stored, but no axisValues yet (tracked before the
+    //     re-check pinning fix), and the page is still showing that same
+    //     variant right now — safe to add the missing technical data
+    //     without changing what's actually being tracked.
+    // Image/name are backfilled unconditionally when missing — those
+    // aren't "which variant" data, so there's no overwrite risk (this is
+    // what fixes products imported from a source with no image data, e.g.
+    // a CSV-to-JSON conversion).
+    const missingVariant  = !tracked.variant;
+    const missingAxesOnly = !tracked.axisValues && tracked.variant === data.variant;
     const backfill = {};
-    if (data.variant && tracked.variant !== data.variant) backfill.variant = data.variant;
+    if (data.variant && (missingVariant || missingAxesOnly)) {
+      backfill.variant = data.variant;
+      backfill.axisValues = data.axisValues || [];
+    }
     if (data.image && !tracked.image) backfill.image = data.image;
     if (data.name && !tracked.name) backfill.name = data.name;
     if (Object.keys(backfill).length) {
       await DB.updateProduct(tracked.id, backfill);
     }
+
+    // Genuinely different variant being viewed than the one tracked —
+    // this is NOT auto-applied (that was the earlier bug: silently
+    // overwriting a deliberately-tracked variant). Surface it instead,
+    // same as "Update Target" is its own explicit action, so switching
+    // which variant is tracked is also something the shopper chooses to
+    // do, not something that happens just from looking at the page.
+    const realMismatch = data.variant && tracked.variant && data.variant !== tracked.variant;
+    $("variant-switch").style.display = realMismatch ? "" : "none";
+    if (realMismatch) {
+      $("vs-tracked-label").textContent = tracked.variant;
+      $("vs-tracked-price").textContent = tracked.displayPrice || fmt(tracked.price);
+      $("vs-current-label").textContent = data.variant;
+      $("vs-current-price").textContent = data.displayPrice || fmt(data.price);
+    }
   } else {
     $("already-tracked").style.display  = "none";
+    $("variant-switch").style.display   = "none";
     $("target-section").style.display   = "";
     $("update-section").style.display   = "none";
     $("tracking-note").style.display    = "none";
@@ -168,6 +196,7 @@ $("btn-track").addEventListener("click", async () => {
     name: currentData.name, variant: currentData.variant, image: currentData.image,
     price: currentData.price, priceMin: currentData.priceMin,
     priceMax: currentData.priceMax, displayPrice: currentData.displayPrice,
+    axisValues: currentData.axisValues || [],
     targetPrice,
   });
   $("btn-track").disabled = false;
@@ -181,6 +210,37 @@ $("btn-track").addEventListener("click", async () => {
   } else {
     showToast(result.error || "Could not save.", "error");
   }
+});
+
+// Explicit, separate action from "Update Target" on purpose — switching
+// which variant is tracked is a bigger change than adjusting a price
+// threshold, so it gets its own deliberate button rather than piggy-
+// backing on one the shopper might click for an unrelated reason.
+// Clears old price history on switch rather than continuing it, so the
+// chart only ever reflects ONE variant's real price movement — mixing
+// different variants' prices into one timeline made past switches look
+// like price drops that never actually happened.
+$("btn-switch-variant").addEventListener("click", async () => {
+  if (!currentData) return;
+  const products = await DB.getAllProducts();
+  const tracked  = products.find(p => p.url === currentData.url);
+  if (!tracked) return;
+  await DB.updateProduct(tracked.id, {
+    variant: currentData.variant,
+    axisValues: currentData.axisValues || [],
+    price: currentData.price,
+    priceMin: currentData.priceMin,
+    priceMax: currentData.priceMax,
+    displayPrice: currentData.displayPrice,
+    lastPrice: currentData.price,
+    lastChecked: new Date().toISOString(),
+    alerted: false,
+  });
+  await DB.clearHistory(tracked.id);
+  await DB.addHistoryEntry(tracked.id, currentData.price);
+  showToast("Now tracking the new variant ✓", "success");
+  renderCurrentProduct(currentData);
+  updateTrackedCount();
 });
 
 $("btn-update-target").addEventListener("click", async () => {
