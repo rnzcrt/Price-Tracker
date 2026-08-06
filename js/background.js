@@ -2,14 +2,12 @@
 // Thesis Step 5: threshold comparison (target hit + bonus 5% drop alert)
 "use strict";
 
-importScripts("uid.js");
-
 const ALARM_NAME               = "pricecheck";
 const CHECK_INTERVAL_MINUTES   = 60;
 const SIGNIFICANT_DROP_PERCENT = 5;
 const MIN_PLAUSIBLE_PRICE      = 100; // pesos, filters out promo badge prices
 
-self.addEventListener("install", () => { self.skipWaiting(); UID.get(); });
+self.addEventListener("install", () => { self.skipWaiting(); });
 self.addEventListener("activate", e => { e.waitUntil(clients.claim()); scheduleAlarm(); });
 
 function scheduleAlarm() {
@@ -129,7 +127,6 @@ async function checkSingleProduct(product, interactive = false) {
     }
 
     await addHistoryEntryIDB(product.id, currentPrice);
-    await UID.logEvidence("price_check", { productId: product.id, productName: product.name, price: currentPrice, platform });
     await evaluateAndNotify(product, currentPrice);
     await updateProductInStorage(product.id, {
       lastPrice:   currentPrice,
@@ -179,7 +176,6 @@ async function evaluateAndNotify(product, currentPrice) {
     if (delivered) {
       await updateProductInStorage(id, { alerted: true, alertedAt: new Date().toISOString() });
     }
-    await UID.logEvidence("target_reached", { productId: id, productName: name, price: currentPrice, targetPrice, delivered });
     return;
   }
 

@@ -270,7 +270,13 @@
     if (!isVisible(el)) return null;
     if (hasMultipleLabeledChildren(el)) return null; // wrapper holding multiple chips, not one chip
     const text = el.textContent.trim();
-    if (!text || text.length > 30) return null;
+    // 70, not 30: real seller-written variant names can run long (e.g.
+    // "Qingxi zhiling pro 50g canned (upgraded isuzu)" at 46 chars was
+    // being silently rejected by the old, tighter cap). Genuine noise
+    // text (paragraphs, descriptions) tends to run well past 70 anyway,
+    // so this still filters that out without cutting off real long
+    // variant names.
+    if (!text || text.length > 70) return null;
     const checkText = stripTrailingCount(text);
     if (NOISE_TEXT_RE.test(checkText) || RATING_PATTERN_RE.test(text) || PRICE_LIKE_RE.test(text) || SHIP_DATE_RE.test(text) || AVG_TIME_RE.test(text)) return null;
     return text;
@@ -314,7 +320,7 @@
     if (tag === "SELECT" || tag === "OPTION" || tag === "SCRIPT" || tag === "STYLE" || tag === "INPUT") return false;
     if (!isVisible(el)) return false;
     const text = el.textContent.trim();
-    if (!text || text.length > 24) return false;
+    if (!text || text.length > 70) return false; // see sanitizeChipText for why 70, not a tighter cap
     const checkText = stripTrailingCount(text);
     if (NOISE_TEXT_RE.test(checkText) || RATING_PATTERN_RE.test(text) || PRICE_LIKE_RE.test(text) || SHIP_DATE_RE.test(text) || AVG_TIME_RE.test(text) || isVariantLabelText(el)) return false;
     if (hasMultipleLabeledChildren(el)) return false;
@@ -423,7 +429,7 @@
     while (sib && hops < 2) {
       if (sib.children.length === 0 && isVisible(sib)) {
         const text = sib.textContent.trim();
-        if (text && text.length <= 40 && !isVariantLabelText(sib) &&
+        if (text && text.length <= 70 && !isVariantLabelText(sib) &&
             !NOISE_TEXT_RE.test(text) && !RATING_PATTERN_RE.test(text) &&
             !BAD_VALUE_RE.test(text) && !SHIP_DATE_RE.test(text) && !AVG_TIME_RE.test(text) && !/[₱$]/.test(text)) {
           return text;
@@ -624,7 +630,7 @@
       const label = m[1].trim();
       const value = m[2].trim();
       if (EXCLUDE_LABEL_WORDS_RE.test(label)) return;
-      if (!value || value.length > 40) return;
+      if (!value || value.length > 70) return;
       if (RATING_PATTERN_RE.test(value) || NOISE_TEXT_RE.test(value) || BAD_VALUE_RE.test(value) || SHIP_DATE_RE.test(value) || AVG_TIME_RE.test(value)) return;
       if (PRICE_LIKE_RE.test(value)) return; // a price/coupon, not a variant value
       const key = normalizeLabel(label);

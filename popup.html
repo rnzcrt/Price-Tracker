@@ -225,15 +225,6 @@
             Download CSV
           </button>
         </div>
-        <hr style="margin:16px 0;border:none;border-top:1px solid #e5e7eb">
-        <p class="modal-desc" style="margin-bottom:6px">Device ID (local to this device only — not synced elsewhere, per this extension's privacy-by-design scope):</p>
-        <div style="display:flex;gap:6px;align-items:center">
-          <code id="device-uid" style="flex:1;font-size:11px;padding:6px 8px;background:#f3f4f6;border-radius:6px;word-break:break-all">loading…</code>
-          <button class="btn btn-secondary" id="btn-copy-uid" style="white-space:nowrap">Copy</button>
-        </div>
-        <button class="btn btn-secondary" id="btn-export-evidence" style="margin-top:10px;width:100%">
-          Download Evidence Log (JSON)
-        </button>
       </div>
     </div>
   </div>
@@ -241,7 +232,6 @@
   <!-- Hidden file input for import -->
   <input type="file" id="import-file-input" accept=".json" style="display:none" />
 
-  <script src="js/uid.js"></script>
   <script src="js/db.js"></script>
   <script src="js/chart.js"></script>
   <script src="js/popup.js"></script>

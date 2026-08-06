@@ -136,10 +136,17 @@ async function renderCurrentProduct(data) {
     $("current-target-display").textContent = tracked.targetPrice != null ? fmt(tracked.targetPrice) : "None set";
     $("update-price-input").value = tracked.targetPrice != null ? tracked.targetPrice : "";
 
-    // Backfill variant on products tracked before this feature existed,
-    // or if the page now reveals a variant that wasn't caught before.
-    if (data.variant && tracked.variant !== data.variant) {
-      await DB.updateProduct(tracked.id, { variant: data.variant });
+    // Backfill variant/image/name on products that are missing them —
+    // either tracked before this data existed, or imported from a source
+    // that never had it (e.g. a CSV-to-JSON conversion, which has no
+    // image URLs at all). Revisiting the product's real page with the
+    // popup open is enough to self-heal these, no re-import needed.
+    const backfill = {};
+    if (data.variant && tracked.variant !== data.variant) backfill.variant = data.variant;
+    if (data.image && !tracked.image) backfill.image = data.image;
+    if (data.name && !tracked.name) backfill.name = data.name;
+    if (Object.keys(backfill).length) {
+      await DB.updateProduct(tracked.id, backfill);
     }
   } else {
     $("already-tracked").style.display  = "none";
@@ -167,7 +174,6 @@ $("btn-track").addEventListener("click", async () => {
 
   if (result.success) {
     await DB.addHistoryEntry(result.product.id, currentData.price);
-    await UID.logEvidence("product_tracked", { productId: result.product.id, productName: currentData.name, platform: currentData.platform, price: currentData.price });
     showToast("Now tracking this product! ✓", "success");
     $("target-price-input").value = "";
     renderCurrentProduct(currentData);
@@ -576,30 +582,11 @@ $("btn-test-notif").addEventListener("click", async () => {
 });
 
 // Export / Import
-$("btn-export").addEventListener("click", async () => {
+$("btn-export").addEventListener("click", () => {
   $("export-modal").style.display = "";
-  $("device-uid").textContent = await UID.get();
 });
 $("btn-modal-close").addEventListener("click", () => { $("export-modal").style.display = "none"; });
 $("export-modal").addEventListener("click", e => { if (e.target === $("export-modal")) $("export-modal").style.display = "none"; });
-
-$("btn-copy-uid").addEventListener("click", async () => {
-  const id = await UID.get();
-  await navigator.clipboard.writeText(id);
-  showToast("UID copied!", "success");
-});
-
-$("btn-export-evidence").addEventListener("click", async () => {
-  const uid = await UID.get();
-  const log = await UID.getEvidenceLog();
-  const out = { exportedAt: new Date().toISOString(), uid, entries: log };
-  const blob = new Blob([JSON.stringify(out, null, 2)], { type: "application/json" });
-  const url  = URL.createObjectURL(blob);
-  const a    = Object.assign(document.createElement("a"), { href: url, download: `pricewatch-evidence-${Date.now()}.json` });
-  document.body.appendChild(a); a.click();
-  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
-  showToast("Evidence log exported!", "success");
-});
 
 $("btn-export-json").addEventListener("click", async () => {
   const data = await DB.exportData();
