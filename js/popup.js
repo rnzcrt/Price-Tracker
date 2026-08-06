@@ -642,11 +642,35 @@ $("btn-test-notif").addEventListener("click", async () => {
 });
 
 // Export / Import
-$("btn-export").addEventListener("click", () => {
-  $("export-modal").style.display = "";
-});
-$("btn-modal-close").addEventListener("click", () => { $("export-modal").style.display = "none"; });
-$("export-modal").addEventListener("click", e => { if (e.target === $("export-modal")) $("export-modal").style.display = "none"; });
+//
+// Two things the modal needs help with, since it's `position: fixed` and
+// Chrome sizes the popup window from whatever content is visible *before*
+// the modal opens:
+//  1. If the Current tab is short (empty/unsupported/loading state), the
+//     popup window itself can be too small to fit the modal — force a
+//     min-height on <body> while it's open so the window grows to fit it,
+//     then release it back to normal on close.
+//  2. Position the scrim/modal to start right below the header + tab bar
+//     (not on top of it), so Current/Tracked/Alerts stay visible above it
+//     instead of getting covered.
+function openExportModal() {
+  const header = document.querySelector(".header");
+  const tabNav = document.querySelector(".tab-nav");
+  const topOffset = header.offsetHeight + tabNav.offsetHeight;
+
+  document.body.style.minHeight = "480px";
+  const overlay = $("export-modal");
+  overlay.style.top = topOffset + "px";
+  overlay.style.display = "";
+}
+function closeExportModal() {
+  $("export-modal").style.display = "none";
+  document.body.style.minHeight = "";
+}
+
+$("btn-export").addEventListener("click", openExportModal);
+$("btn-modal-close").addEventListener("click", closeExportModal);
+$("export-modal").addEventListener("click", e => { if (e.target === $("export-modal")) closeExportModal(); });
 
 $("btn-export-json").addEventListener("click", async () => {
   const data = await DB.exportData();
@@ -655,7 +679,7 @@ $("btn-export-json").addEventListener("click", async () => {
   const a    = Object.assign(document.createElement("a"), { href: url, download: `pricewatch-export-${Date.now()}.json` });
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
-  $("export-modal").style.display = "none";
+  closeExportModal();
   showToast("Exported!", "success");
 });
 
@@ -676,7 +700,7 @@ $("btn-export-csv").addEventListener("click", async () => {
   const a    = Object.assign(document.createElement("a"), { href: url, download: `pricewatch-export-${Date.now()}.csv` });
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1000);
-  $("export-modal").style.display = "none";
+  closeExportModal();
   showToast("CSV exported!", "success");
 });
 

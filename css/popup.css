@@ -27,62 +27,19 @@
   --transition:  0.18s ease;
 }
 
-/* 1. Body & HTML setup */
 html {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   font-size: 13px;
-  background: var(--bg); /* Keeps dark background solid */
+  background: var(--bg);
   color: var(--text);
-  height: max-content;   /* Allows Chrome popup frame to fit content tight */
 }
 
 body {
   width: 360px;
-  background: var(--bg);
-  min-height: unset;
+  min-height: 200px;
   max-height: 600px;
+  overflow-y: auto;
   overflow-x: hidden;
-  position: relative;
-}
-
-/* 2. Tab Panel height fixes */
-.tab-panel { 
-  display: none;
-  height: auto;               /* Remove height: calc(600px - 92px); */
-  overflow-y: auto; 
-}
-.tab-panel.active { 
-  display: block; 
-}
-
-/* 3. Modal Overlay & Modal (No Scrollbars, Max Width) */
-.modal-overlay {
-  position: absolute;  /* Absolute instead of fixed keeps overlay bound inside popup height */
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(15, 17, 23, 0.85); /* Uses dark theme color var(--bg) with opacity */
-  z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-}
-
-.modal {
- background: var(--bg-2);
-  border: 1px solid var(--border-2);
-  border-radius: var(--radius);
-  width: 100%;
-  max-width: 336px;    /* Expands wide inside the 360px container */
-  overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);           /* Removes scrollbars inside modal */
-}
-
-.modal-body {
-  padding: 14px;
-  overflow: hidden;           /* Clean containment without scrollbars */
 }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -177,12 +134,7 @@ body {
 }
 
 /* Tab Panels */
-.tab-panel { 
-  display: none;
-  height: auto; /* adjust based on your header + tabs height */
-  max-height: 508px;
-  overflow-y: auto; 
-}
+.tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
 /* States */
@@ -668,21 +620,26 @@ body {
 /* Modal */
 .modal-overlay {
   position: fixed;
-  inset: 0;
+  top: 90px;   /* JS overrides this to the exact header+tab-nav height on open */
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0,0,0,0.7);
   z-index: 50;
   display: grid;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
+  align-items: start;
+  justify-items: center;
+  padding: 16px;
+  overflow-y: auto;
 }
 .modal {
   background: var(--bg-2);
   border: 1px solid var(--border-2);
   border-radius: var(--radius);
   width: 100%;
-  max-width: 336px;
+  max-width: 300px;
   overflow: hidden;
+  flex-shrink: 0;
 }
 .modal-header {
   display: flex;
@@ -692,7 +649,7 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .modal-title { font-size: 13px; font-weight: 700; }
-.modal-body { padding: 14px; overflow: hidden; }
+.modal-body { padding: 14px; }
 .modal-desc { font-size: 12px; color: var(--text-2); margin-bottom: 12px; line-height: 1.5; }
 .export-options { display: flex; flex-direction: column; gap: 12px; }
 .export-option { display: flex; flex-direction: column; gap: 4px; }
