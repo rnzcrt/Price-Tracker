@@ -127,7 +127,7 @@ async function checkSingleProduct(product, interactive = false) {
     }
 
     await addHistoryEntryIDB(product.id, currentPrice);
-    await evaluateAndNotify(product, currentPrice);
+    await evaluateAndNotify(product, currentPrice, interactive);
     await updateProductInStorage(product.id, {
       lastPrice:   currentPrice,
       lastChecked: new Date().toISOString(),
@@ -155,7 +155,12 @@ async function runBackgroundPriceChecks(interactive = false) {
 }
 
 // Step 5: Threshold Comparison
-async function evaluateAndNotify(product, currentPrice) {
+// interactive = true for "Check Prices Now" / refresh-button clicks — those
+// always re-notify when at/below target, even if `alerted` is already set,
+// since the user is explicitly asking "what's the status right now?".
+// The silent hourly alarm (interactive = false) still respects `alerted`
+// so it doesn't spam a notification every hour while price sits flat.
+async function evaluateAndNotify(product, currentPrice, interactive = false) {
   const { id, name, platform, targetPrice, lastPrice, price: originalPrice } = product;
   const platformLabel = platform === "lazada" ? "Lazada PH" : "Shopee PH";
   const fmt = n => `₱${Number(n).toLocaleString("en-PH", { minimumFractionDigits: 2 })}`;
@@ -167,7 +172,7 @@ async function evaluateAndNotify(product, currentPrice) {
   }
 
   // Thesis Step 5: price at or below target → notify
-  if (targetPrice && currentPrice <= targetPrice && !product.alerted) {
+  if (targetPrice && currentPrice <= targetPrice && (!product.alerted || interactive)) {
     const title   = `🎯 Target Price Reached — ${platformLabel}`;
     const message = `${name}\nPrice is now ${fmt(currentPrice)} — at or below your target of ${fmt(targetPrice)}!`;
     const delivered = await fireNotification(id, title, message, "target");
