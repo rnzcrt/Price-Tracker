@@ -3,12 +3,7 @@
   "name": "PriceWatch PH – Shopee & Lazada Tracker",
   "version": "2.2.4",
   "description": "Track product prices on Shopee Philippines and Lazada Philippines. Get notified when your target price is met.",
-  "permissions": [
-    "activeTab",
-    "storage",
-    "notifications",
-    "alarms"
-  ],
+  "permissions": ["activeTab", "storage", "notifications", "alarms"],
   "background": {
     "service_worker": "js/background.js"
   },

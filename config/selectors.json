@@ -27,9 +27,7 @@
         "picture.UkIsx8 img"
       ],
       "priceExcludeStyle": ["line-through", "rgba(0, 0, 0, 0.26)"],
-      "variant": [
-        "button.selection-box-selected"
-      ]
+      "variant": ["button.selection-box-selected"]
     }
   },
   "lazada": {
@@ -37,12 +35,8 @@
     "urlPattern": "lazada.com.ph",
     "productPagePattern": "/products/|i\\d{5,}",
     "selectors": {
-      "price": [
-        ".pdp-v2-product-price-content-salePrice-amount"
-      ],
-      "priceExclude": [
-        ".pdp-v2-product-price-content-originalPrice-amount"
-      ],
+      "price": [".pdp-v2-product-price-content-salePrice-amount"],
+      "priceExclude": [".pdp-v2-product-price-content-originalPrice-amount"],
       "priceFallback": [
         "[class*='pdp-v2-product-price-content'][class*='amount']:not([class*='originalPrice'])"
       ],
