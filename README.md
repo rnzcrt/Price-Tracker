@@ -1,6 +1,17 @@
 # PriceWatch PH – Chrome & Edge Extension
 
-A privacy-first price monitoring browser extension for **Shopee Philippines** and **Lazada Philippines**. Built as part of the Holy Angel University Computer Science thesis project.
+![Manifest V3](https://img.shields.io/badge/Chrome_Extension-Manifest_V3-4285F4?logo=googlechrome&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
+![Privacy](https://img.shields.io/badge/Data-100%25_local-2ea44f)
+[![Made with AI](https://img.shields.io/badge/Made_with-AI_assistance-blue)](#ai-disclosure)
+
+A privacy-first price monitoring browser extension for **Shopee Philippines** and **Lazada Philippines**. Built as a group thesis project for the BS Computer Science program at Holy Angel University.
+
+It reads the product name, image, and price straight from the page, lets you track a *specific variant* (size / colour / bundle), and notifies you when the price drops or rises to your target. Everything stays on your device: there is no server and no account.
+
+## Screenshots
+
+<table><tr><td align="center"><img src="docs/screenshots/popup-current.png" width="220" alt="Current tab"><br><sub>Current tab</sub></td><td align="center"><img src="docs/screenshots/popup-tracked.png" width="220" alt="Tracked tab"><br><sub>Tracked tab</sub></td><td align="center"><img src="docs/screenshots/price-history.png" width="220" alt="Price history"><br><sub>Price history</sub></td></tr></table>
 
 ---
 
@@ -24,7 +35,7 @@ A privacy-first price monitoring browser extension for **Shopee Philippines** an
 1. Open Chrome and go to `chrome://extensions`
 2. Enable **Developer mode** (top right toggle)
 3. Click **Load unpacked**
-4. Select the `price-tracker-extension` folder
+4. Select the cloned `Price-Tracker` folder (the one containing `manifest.json`)
 5. The PriceWatch PH icon will appear in your toolbar
 
 ### Microsoft Edge
@@ -32,7 +43,7 @@ A privacy-first price monitoring browser extension for **Shopee Philippines** an
 1. Open Edge and go to `edge://extensions`
 2. Enable **Developer mode** (left sidebar)
 3. Click **Load unpacked**
-4. Select the `price-tracker-extension` folder
+4. Select the cloned `Price-Tracker` folder (the one containing `manifest.json`)
 
 ---
 
@@ -106,7 +117,7 @@ Many Shopee and Lazada products come in several sizes, colours, or bundles, each
 ## Files
 
 ```
-price-tracker-extension/
+Price-Tracker/
 ├── manifest.json          # Extension manifest (Manifest V3)
 ├── popup.html             # Extension popup UI
 ├── config/
@@ -124,3 +135,15 @@ price-tracker-extension/
     ├── icon48.png
     └── icon128.png
 ```
+
+---
+
+## Project context
+
+- **Type:** Group thesis project, Holy Angel University
+- **Stack:** JavaScript, HTML, CSS, Chrome Extension APIs (Manifest V3, service worker, Alarms, Notifications, `chrome.storage.local`)
+- **Approach:** Selector profiles live in `config/selectors.json`, so layout changes on Shopee or Lazada can be patched without touching the extraction logic.
+
+## AI disclosure
+
+Parts of this project and its documentation were created with AI assistance. This README was drafted with Claude (Anthropic) and reviewed by me. For a detailed example of how I track AI use, see the [AI usage log in LaundryLog](https://github.com/rnzcrt/LaundryLog/blob/main/AI-USAGE.md).
