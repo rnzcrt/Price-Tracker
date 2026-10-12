@@ -146,4 +146,4 @@ Price-Tracker/
 
 ## AI disclosure
 
-Parts of this project and its documentation were created with AI assistance. This README was drafted with Claude (Anthropic) and reviewed by me. For a detailed example of how I track AI use, see the [AI usage log in LaundryLog](https://github.com/rnzcrt/LaundryLog/blob/main/AI-USAGE.md).
+Parts of this project and its documentation were created with AI assistance. This README was drafted with Claude (Anthropic) and reviewed by me.
