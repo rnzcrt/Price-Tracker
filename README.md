@@ -11,7 +11,7 @@ It reads the product name, image, and price straight from the page, lets you tra
 
 ## Screenshots
 
-<table><tr><td align="center"><img src="docs/screenshots/popup-current.png" width="220" alt="Current tab"><br><sub>Current tab</sub></td><td align="center"><img src="docs/screenshots/popup-tracked.png" width="220" alt="Tracked tab"><br><sub>Tracked tab</sub></td><td align="center"><img src="docs/screenshots/price-history.png" width="220" alt="Price history"><br><sub>Price history</sub></td></tr></table>
+<table><tr><td align="center"><img src="docs/screenshots/current-tab.png" width="220" alt="Current tab"><br><sub>Current tab</sub></td><td align="center"><img src="docs/screenshots/tracked-tab.png" width="220" alt="Tracked tab"><br><sub>Tracked tab</sub></td><td align="center"><img src="docs/screenshots/price-history.png" width="220" alt="Price history"><br><sub>Price history</sub></td></tr></table>
 
 ---
 
