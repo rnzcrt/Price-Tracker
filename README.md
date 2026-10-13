@@ -144,6 +144,15 @@ Price-Tracker/
 - **Stack:** JavaScript, HTML, CSS, Chrome Extension APIs (Manifest V3, service worker, Alarms, Notifications, `chrome.storage.local`)
 - **Approach:** Selector profiles live in `config/selectors.json`, so layout changes on Shopee or Lazada can be patched without touching the extraction logic.
 
+## Team
+
+Group project at Holy Angel University.
+
+- [Ranz Emmanuel Cuarto](https://github.com/rnzcrt)
+- [Mark Darius David](https://github.com/darsy29)
+- [Rian Cortez](https://github.com/riancrtz)
+- [Ryence Cortez](https://github.com/Ryence07)
+
 ## AI disclosure
 
 Parts of this project and its documentation were created with AI assistance. This README was drafted with Claude (Anthropic) and reviewed by me.
