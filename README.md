@@ -156,3 +156,29 @@ Group project at Holy Angel University.
 ## AI disclosure
 
 Parts of this project and its documentation were created with AI assistance. This README was drafted with Claude (Anthropic) and reviewed by me.
+
+## Run with Docker
+
+You need Docker Desktop.
+
+```
+git clone https://github.com/rnzcrt/Price-Tracker.git
+cd Price-Tracker
+docker compose up -d --build
+```
+
+1. Open https://localhost:3101 in your browser. Accept the certificate warning.
+2. Wait up to 30 seconds for the screen to load.
+3. In that window, go to chrome://extensions. PriceWatch PH 2.2.4 should be there.
+4. Pin the extension, then open a Shopee PH or Lazada PH product page.
+
+To stop it:
+
+```
+docker compose down
+```
+
+Notes:
+- The container runs Chromium with the extension already loaded.
+- There is no server. All data stays inside the browser-data folder.
+- If a port is busy, change the left number of the port in docker-compose.yml.

@@ -1,0 +1,17 @@
+services:
+  pricewatch-ph:
+    build: .
+    image: pricewatch-ph:2.2.4
+    container_name: pricewatch-ph
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Asia/Manila
+    ports:
+      - "3100:3000"
+      - "3101:3001"
+    shm_size: "1gb"
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - ./browser-data:/config

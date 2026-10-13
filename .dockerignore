@@ -1,0 +1,6 @@
+.git
+docs
+browser-data
+README.md
+Dockerfile
+docker-compose.yml
